@@ -25,6 +25,7 @@ struct TestContext
 	bool has_ansi_codes;
 	bool is_in_panic;
 	bool is_quiet_mode;
+	bool is_no_capture;
 	String current_test_name;
 	TestFn setup_fn;
 	TestFn teardown_fn;
@@ -119,7 +120,7 @@ fn void test_panic(String message, String file, String function, uint line) @loc
 
 fn void mute_output() @local
 {
-	if (!test_context.fake_stdout.file) return;
+	if (test_context.is_no_capture || !test_context.fake_stdout.file) return;
 	File* stdout = io::stdout();
     File* stderr = io::stderr();
 	*stderr = test_context.fake_stdout;
@@ -129,7 +130,7 @@ fn void mute_output() @local
 
 fn void unmute_output(bool has_error) @local
 {
-	if (!test_context.fake_stdout.file) return;
+	if (test_context.is_no_capture || !test_context.fake_stdout.file) return;
 
 	File* stdout = io::stdout();
 	File* stderr = io::stderr();
@@ -195,6 +196,8 @@ fn bool run_tests(String[] args, TestUnit[] tests) @private
 				sort_tests = false;
 			case "--test-noleak":
 				check_leaks = false;
+			case "--test-nocapture":
+				context.is_no_capture = true;
 			case "--noansi":
 				context.has_ansi_codes = false;
 			case "--useansi":
