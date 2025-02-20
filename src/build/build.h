@@ -507,6 +507,7 @@ typedef struct BuildOptions_
 	bool test_breakpoint;
 	bool test_quiet;
 	bool test_nosort;
+	bool test_noleak;
 	const char *custom_linker_path;
 	uint32_t symtab_size;
 	unsigned version;

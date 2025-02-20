@@ -170,6 +170,7 @@ fn bool run_tests(String[] args, TestUnit[] tests) @private
 {
 	usz max_name;
 	bool sort_tests = true;
+	bool check_leaks = true;
 	foreach (&unit : tests)
 	{
 		if (max_name < unit.name.len) max_name = unit.name.len;
@@ -192,6 +193,8 @@ fn bool run_tests(String[] args, TestUnit[] tests) @private
 				context.breakpoint_on_assert = true;
 			case "--test-nosort":
 				sort_tests = false;
+			case "--test-noleak":
+				check_leaks = false;
 			case "--noansi":
 				context.has_ansi_codes = false;
 			case "--useansi":
@@ -272,7 +275,7 @@ fn bool run_tests(String[] args, TestUnit[] tests) @private
 		{
 			mute_output();
 			mem.clear();
-			allocator::thread_allocator = &mem;
+			if (check_leaks) allocator::thread_allocator = &mem;
 			$if(!$$OLD_TEST):
 				unit.func();
 			$else
@@ -287,7 +290,7 @@ fn bool run_tests(String[] args, TestUnit[] tests) @private
 			{
 				context.teardown_fn();
 			}
-			allocator::thread_allocator = context.stored.allocator;
+			if(check_leaks) allocator::thread_allocator = context.stored.allocator;
 
 			unmute_output(false); // all good, discard output
 			if (mem.has_leaks())
