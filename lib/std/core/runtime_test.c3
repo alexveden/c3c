@@ -186,15 +186,15 @@ fn bool run_tests(String[] args, TestUnit[] tests) @private
 	{
 		switch (args[i])
 		{
-			case "breakpoint":
+			case "--test-breakpoint":
 				context.breakpoint_on_assert = true;
-			case "nosort":
+			case "--test-nosort":
 				sort_tests = false;
-			case "noansi":
+			case "--noansi":
 				context.has_ansi_codes = false;
-			case "useansi":
+			case "--useansi":
 				context.has_ansi_codes = true;
-			case "filter":
+			case "--test-filter":
 				if (i == args.len - 1)
 				{
 					io::printn("Invalid arguments to test runner.");
