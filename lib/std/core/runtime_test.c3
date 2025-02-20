@@ -24,6 +24,7 @@ struct TestContext
 	bool assert_print_backtrace;
 	bool has_ansi_codes;
 	bool is_in_panic;
+	bool is_quiet_mode;
 	String current_test_name;
 	TestFn setup_fn;
 	TestFn teardown_fn;
@@ -139,6 +140,7 @@ fn void unmute_output(bool has_error) @local
 	usz log_size = test_context.fake_stdout.seek(0, Seek.CURSOR)!!;
 	if (has_error)
 	{
+		io::printf("\nTesting %s ", test_context.current_test_name);
 		io::printn(test_context.has_ansi_codes ? "[\e[0;31mFAIL\e[0m]" : "[FAIL]");
 	}
 
@@ -194,6 +196,8 @@ fn bool run_tests(String[] args, TestUnit[] tests) @private
 				context.has_ansi_codes = false;
 			case "--useansi":
 				context.has_ansi_codes = true;
+			case "--test-quiet":
+				context.is_quiet_mode = true;
 			case "--test-filter":
 				if (i == args.len - 1)
 				{
@@ -233,7 +237,7 @@ fn bool run_tests(String[] args, TestUnit[] tests) @private
 	name.append_repeat('-', len / 2);
 	name.append(" TESTS ");
 	name.append_repeat('-', len - len / 2);
-	io::printn(name);
+	if(!context.is_quiet_mode) io::printn(name);
 	name.clear();
 	TempState temp_state = mem::temp_push();
 	defer mem::temp_pop(temp_state);
@@ -252,7 +256,14 @@ fn bool run_tests(String[] args, TestUnit[] tests) @private
 		defer name.clear();
 		name.appendf("Testing %s ", unit.name);
 		name.append_repeat('.', max_name - unit.name.len + 2);
-		io::printf("%s ", name.str_view());
+		if (context.is_quiet_mode) 
+		{
+			io::print(".");
+		} 
+		else 
+		{
+			io::printf("%s ", name.str_view());
+		}
 		(void)io::stdout().flush();
 		TrackingAllocator mem;
 
@@ -272,22 +283,26 @@ fn bool run_tests(String[] args, TestUnit[] tests) @private
 				}
 			$endif
 			// track cleanup that may take place in teardown_fn
-			if (test_context.teardown_fn)
+			if (context.teardown_fn)
 			{
-				test_context.teardown_fn();
+				context.teardown_fn();
 			}
 			allocator::thread_allocator = context.stored.allocator;
 
 			unmute_output(false); // all good, discard output
 			if (mem.has_leaks())
-            {
-            	io::print(test_context.has_ansi_codes ? "[\e[0;31mFAIL\e[0m]" : "[FAIL]");
-            	io::printn(" LEAKS DETECTED!");
-            	mem.print_report();
-            }
-            else
-            {
-                io::printfn(test_context.has_ansi_codes ? "[\e[0;32mPASS\e[0m]" : "[PASS]");
+			{
+				if(context.is_quiet_mode) io::printf("\n%s ", context.current_test_name);
+				io::print(context.has_ansi_codes ? "[\e[0;31mFAIL\e[0m]" : "[FAIL]");
+				io::printn(" LEAKS DETECTED!");
+				mem.print_report();
+			}
+			else
+			{
+				if(!context.is_quiet_mode) 
+				{
+					io::printfn(context.has_ansi_codes ? "[\e[0;32mPASS\e[0m]" : "[PASS]");
+				}
 				tests_passed++;
 			}
 		}
@@ -297,9 +312,9 @@ fn bool run_tests(String[] args, TestUnit[] tests) @private
 
 	int n_failed = test_count - tests_passed - tests_skipped;
 	io::printf("Test Result: %s%s%s: ",
-				test_context.has_ansi_codes ? (n_failed ? "\e[0;31m" : "\e[0;32m") : "",
+				context.has_ansi_codes ? (n_failed ? "\e[0;31m" : "\e[0;32m") : "",
 				n_failed ? "FAILED" : "PASSED",
-				test_context.has_ansi_codes ? "\e[0m" : "",
+				context.has_ansi_codes ? "\e[0m" : "",
 				);
 
 	io::printfn("%d passed, %d failed, %d skipped.",
@@ -308,8 +323,8 @@ fn bool run_tests(String[] args, TestUnit[] tests) @private
 				tests_skipped);
 
 	// cleanup fake_stdout file
-	if (test_context.fake_stdout.file) libc::fclose(test_context.fake_stdout.file);
-	test_context.fake_stdout.file = null;
+	if (context.fake_stdout.file) libc::fclose(context.fake_stdout.file);
+	context.fake_stdout.file = null;
 
 	return n_failed == 0;
 }

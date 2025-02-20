@@ -136,6 +136,7 @@ static void usage(bool full)
 		print_opt("--test-filter <arg>", "Set a filter when running tests, running only matching tests.");
 		print_opt("--test-breakpoint", "When running tests, trigger a breakpoint on failure.");
 		print_opt("--test-nosort", "Do not sort tests.");
+		print_opt("--test-quiet", "Run tests without printing full names, printing output only on failure");
 	}
 	PRINTF("");
 	print_opt("-l <library>", "Link with the static or dynamic library provided.");
@@ -721,6 +722,11 @@ static void parse_option(BuildOptions *options)
 			if (match_longopt("test-breakpoint"))
 			{
 				options->test_breakpoint = true;
+				return;
+			}
+			if (match_longopt("test-quiet"))
+			{
+				options->test_quiet = true;
 				return;
 			}
 			if (match_longopt("test-nosort"))
